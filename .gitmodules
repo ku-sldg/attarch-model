@@ -1,0 +1,3 @@
+[submodule "CTL"]
+	path = CTL
+	url = git@github.com:ku-sldg/CTL.git

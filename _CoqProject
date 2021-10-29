@@ -1,0 +1,33 @@
+-R CTL/Glib Glib 
+-R CTL/Ctl Ctl
+-R src AttarchModel
+
+CTL/Glib/Notation.v
+CTL/Glib/TacticCombinators.v
+CTL/Glib/GeneralTactics.v
+CTL/Glib/Axioms/UipFacts.v
+CTL/Glib/Axioms/Classical.v
+CTL/Glib/Axioms/Extensionality.v
+CTL/Glib/Truncations.v
+CTL/Glib/Axioms/Choice.v
+CTL/Glib/Axioms/Axioms.v
+CTL/Glib/Gen.v
+CTL/Glib/Induct.v
+CTL/Glib/Quotient.v
+CTL/Glib/Isomorphisms.v
+CTL/Glib/Cardinality.v
+CTL/Glib/Misc.v
+CTL/Glib/Glib.v
+
+CTL/Ctl/BinaryRelations.v
+CTL/Ctl/Paths.v
+CTL/Ctl/Definition.v
+CTL/Ctl/Basic.v
+CTL/Ctl/Tactics.v
+CTL/Ctl/Properties.v
+CTL/Ctl/Ctl.v
+
+src/Privilege.v
+src/TransitionSystems.v
+src/AttarchTrans.v
+src/AttarchProperties.v
