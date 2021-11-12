@@ -5,17 +5,18 @@
 CTL/Glib/Notation.v
 CTL/Glib/TacticCombinators.v
 CTL/Glib/GeneralTactics.v
+CTL/Glib/Wf.v
 CTL/Glib/Axioms/UipFacts.v
 CTL/Glib/Axioms/Classical.v
 CTL/Glib/Axioms/Extensionality.v
 CTL/Glib/Truncations.v
 CTL/Glib/Axioms/Choice.v
 CTL/Glib/Axioms/Axioms.v
+CTL/Glib/PropNormalize.v
 CTL/Glib/Gen.v
 CTL/Glib/Induct.v
 CTL/Glib/Quotient.v
 CTL/Glib/Isomorphisms.v
-CTL/Glib/Cardinality.v
 CTL/Glib/Misc.v
 CTL/Glib/Glib.v
 

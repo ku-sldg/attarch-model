@@ -79,7 +79,7 @@ Proof using.
   - reflexivity.
   - extensionality lookup.
     unfold map_access.
-    now destruct (lookup =? x).
+    follows destruct (lookup =? x).
 Qed.
 
 Lemma refl_string_eq : forall x y,
@@ -87,7 +87,7 @@ Lemma refl_string_eq : forall x y,
   x = y.
 Proof using.
   intros * ?.
-  now destruct (eqb_spec x y).
+  follows destruct (eqb_spec x y).
 Qed.
 
 Theorem env_singleton_inv : forall acc x y V (v: V) v',
@@ -99,7 +99,7 @@ Proof using.
   unfold env_singleton in H.
   destruct (y =? x) eqn:case; [|discriminate].
   apply refl_string_eq in case as ->.
-  now inv H.
+  follows inv H.
 Qed.
 
 Theorem env_prepend_singleton_unchanged : forall (Γ: env) x y acc V (v: V),
@@ -121,7 +121,7 @@ Theorem write_unchanged : forall Γ Γ' x y c V (v: V),
 Proof using.
   intros * Hwrite Hneq.
   destruct Hwrite as [acc [[curr [(Hwrite1 & Hwrite2 & ->) _]] _]].
-  now apply env_prepend_singleton_unchanged.
+  follows apply env_prepend_singleton_unchanged.
 Qed.
 
 Theorem write_unchanged_read : forall Γ Γ' x y c c' V (v: V) V' (v': V'),
@@ -137,12 +137,12 @@ Proof using.
   max split.
   - rewrite <- Hlookup.
     symmetry.
-    enow eapply write_unchanged.
+    follows eapply write_unchanged.
   - assumption.
   - intros * [H _].
     erewrite <- write_unchanged in H; [|eassumption|eassumption].
     rewrite Hlookup in H.
-    now inv H.
+    follows inv H.
 Qed.
 
 Theorem write_unchanged_read' : forall Γ Γ' x y c c' V (v: V) V' (v': V'),
@@ -157,12 +157,12 @@ Proof using.
   exists acc.
   max split.
   - rewrite <- Hlookup.
-    enow eapply write_unchanged.
+    follows eapply write_unchanged.
   - assumption.
   - intros * [H _].
-    erewrite <- write_unchanged in Hlookup; [|eassumption|eassumption].
+    after erewrite <- write_unchanged in Hlookup.
     rewrite Hlookup in H.
-    now inv H.
+    follows inv H.
 Qed.
 
 Theorem no_lookup_no_read : forall Γ c x V (v: V),
