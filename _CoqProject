@@ -29,6 +29,6 @@ CTL/Ctl/Properties.v
 CTL/Ctl/Ctl.v
 
 src/Privilege.v
-src/TransitionSystems.v
+src/Env.v
 src/AttarchTrans.v
 src/AttarchProperties.v
