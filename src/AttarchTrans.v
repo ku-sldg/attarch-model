@@ -68,7 +68,7 @@ Inductive platam_trans : relation (platam_label × env) :=
         (platam_init, Γ)
         (platam_meas_release, Γ')
   | platam_measure_release : forall Γ Γ' platam_key decr_key,
-      read  Γ "platam" "good_image" true ->
+      read  Γ "platam" "good_os" true ->
       read  Γ "platam" "useram_key_decr_key" decr_key ->
       read  Γ "platam" "platam_key" platam_key -> 
       write Γ "platam" "vmm_dataport" (decrypt_useram_key_decr_key decr_key platam_key) Γ' ->
@@ -142,6 +142,7 @@ Inductive malicious_proc_trans : relation env :=
       write Γ "malicious_proc" "good_os" false Γ' ->
       malicious_proc_trans Γ Γ'
   | leak_key : forall Γ Γ',
+      (* good_os false *)
       changeAcc Γ "useram_key" (λ acc, canRead "malicious_proc" ⊔ acc) Γ' ->
       malicious_proc_trans Γ Γ'.
 

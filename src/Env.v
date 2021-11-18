@@ -103,6 +103,34 @@ Proof using.
   follows destruct (eqb_spec x y).
 Qed.
 
+Lemma refl_string_neq : forall x y,
+  x <> y ->
+  x =? y = false.
+Proof using.
+  intros * ?.
+  follows destruct (eqb_spec x y).
+Qed.
+
+Lemma good_lookup_env_singleton_inv : forall x x' acc acc' V (v: V) V' (v': V'),
+  env_singleton x acc v x' = Some (acc', box v') ->
+  x = x' /\ acc = acc' /\ V = V' /\ v ~= v'.
+Proof using.
+  intros * H.
+  unfold env_singleton in H.
+  destruct (eqb_spec x' x).
+  - follows inv H.
+  - discriminate H.
+Qed.
+
+Corollary good_lookup_env_singleton_inv' : forall x x' acc acc' V (v: V) V' (v': V'),
+  (acc ? x ↦ v) x' = Some (acc', box v') ->
+  x = x' /\ acc = acc' /\ V = V' /\ v ~= v'.
+Proof using.
+  intros *.
+  rewrite map_acc_env_singleton.
+  apply good_lookup_env_singleton_inv.
+Qed.
+
 Theorem concat_assoc : forall Γ1 Γ2 Γ3,
   (Γ1;; Γ2);; Γ3 = Γ1;; (Γ2;; Γ3).
 Proof using.
@@ -587,13 +615,18 @@ Tactic Notation "simpl_rws!" :=
   repeat (simpl_rws || write_unchanged_facts || changeAcc_unchanged_facts).
 
 Require Import Ctl.
-Ltac rw_solver := 
+Tactic Notation "rw_solver" "with" tactic3(tac) :=
+  unfold not in *;
   intros;
   tentails! in *;
   intros;
   simpl_rws!;
   repeat find (fun H => apply refl_string_eq in H);
+  tac;
   tedious 3.
+
+Tactic Notation "rw_solver" :=
+  rw_solver with idtac.
 
 Close Scope env_scope.
 Close Scope string_scope.
