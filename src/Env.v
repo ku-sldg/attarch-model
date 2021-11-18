@@ -8,11 +8,11 @@ Open Scope string_scope.
 (* Partial mappings of variable names to heterogeneous values paired with access controls *)
 
 
-Definition any : Type := Σ t: Type, t.
+(* Definition any : Type := Σ t: Type, t.
 Definition box {t} (x: t) : any := existT (λ x, x) t x.
 
 Definition unbox {A} (b: any) (elim: forall t, t -> A) : A :=
-  elim (projT1 b) (projT2 b).
+  elim (projT1 b) (projT2 b). *)
 
 (* TODO: abstract as a section variable? *)
 Definition var  := string.
@@ -31,7 +31,7 @@ Notation "•" := env_empty : env_scope.
 
 Definition env_singleton {V} var (acc: access) (v: V): env := λ lookup,
   if lookup =? var then Some (acc, box v) else None.
-Notation "var ↦ v" := (env_singleton var allAcc v)
+Notation "var ↦ v" := (env_singleton var acc_top v)
   (at level 55, right associativity) : env_scope.
 
 Definition map_access (Γ: env) (acc: access): env := λ lookup, 
@@ -63,6 +63,12 @@ Definition write {V} (Γ: env) (c: comp) (name: var) (v: V) (Γ': env) : Prop :=
     acc c p_write /\ 
     Γ' = acc ? name ↦ v ;; Γ.
 
+Definition changeAcc (Γ: env) (name: var) (f: access -> access) (Γ': env) : Prop :=
+  exists (acc: access) V (v: V),
+    Γ name = Some (acc, box v) /\
+    Γ' = f acc ? name ↦ v ;; Γ.
+
+
 Definition remove_var (Γ: env) var : env := λ lookup,
   if lookup =? var then None else Γ lookup.
 
@@ -75,7 +81,7 @@ Proof using.
   replace (
     acc ? (λ lookup, 
       if lookup =? x
-      then Some (allAcc, box v) 
+      then Some (acc_top, box v) 
       else None))
   with
     (λ lookup, 
@@ -130,7 +136,6 @@ Proof using.
   - reflexivity.
 Qed.
 
-(* Theorem write_unchanged : forall Γ Γ' x y c V (v: V), *)
 Theorem write_unchanged {Γ Γ' x y c V} {v: V}:
   write Γ c x v Γ' ->
   x <> y ->
@@ -141,7 +146,6 @@ Proof using.
   follows apply env_prepend_singleton_unchanged.
 Qed.
 
-(* Theorem write_unchanged_read : forall Γ Γ' x y c c' V (v: V) V' (v': V'), *)
 Theorem write_unchanged_read {Γ Γ' x y c c' V V'} {v: V} {v': V'}:
   x <> y ->
   write Γ c x v Γ' ->
@@ -159,7 +163,6 @@ Proof using.
   - assumption.
 Qed.
 
-(* Theorem write_unchanged_read' : forall Γ Γ' x y c c' V (v: V) V' (v': V'), *)
 Theorem write_unchanged_read' {Γ Γ' x y c c' V V'} {v: V} {v': V'}:
   x <> y ->
   write Γ c x v Γ' ->
@@ -174,6 +177,91 @@ Proof using.
   - rewrite <- Hlookup.
     follows eapply write_unchanged.
   - assumption.
+Qed.
+
+Theorem changeAcc_unchanged {Γ Γ' x y f}:
+  x <> y ->
+  changeAcc Γ x f Γ' ->
+  Γ y = Γ' y.
+Proof using.
+  intros * Hneq Hchange.
+  destruct Hchange as (acc & V & v & lookup & ->).
+  follows apply env_prepend_singleton_unchanged.
+Qed.
+
+Theorem changeAcc_unchanged_read {Γ Γ' x y c f V} {v: V}:
+  x <> y ->
+  changeAcc Γ x f Γ' ->
+  read Γ c y v ->
+  read Γ' c y v.
+Proof using. 
+  intros * Hneq Hchange Hread. 
+  destruct Hread as (acc & Hlookup & Hacc).
+  exists acc.
+  after split.
+  rewrite <- Hlookup.
+  symmetry.
+  follows eapply changeAcc_unchanged.
+Qed.
+
+Theorem changeAcc_unchanged_read' {Γ Γ' x y c f V} {v: V}:
+  x <> y ->
+  changeAcc Γ x f Γ' ->
+  read Γ' c y v ->
+  read Γ c y v.
+Proof using. 
+  intros * Hneq Hchange Hread. 
+  destruct Hread as (acc & Hlookup & Hacc).
+  exists acc.
+  after split.
+  rewrite <- Hlookup.
+  follows eapply changeAcc_unchanged.
+Qed.
+
+Theorem changeAcc_weakened_read {Γ Γ' x y c f V} {v: V}:
+  changeAcc Γ x f Γ' ->
+  (forall acc, acc ⊑ f acc) ->
+  read Γ c y v ->
+  read Γ' c y v.
+Proof using. 
+  intros * Hchange Hweaken Hread.
+  destruct classic (x = y) as case.
+  - subst.
+    destruct Hchange as (acc & W & w & Hlookup & ->).
+    destruct Hread as (acc' & Hlookup' & Hacc').
+    rewritec Hlookup in Hlookup'.
+    inject Hlookup'.
+    exists (f acc').
+    split.
+    + unfold env_concat.
+      rewrite map_acc_env_singleton.
+      unfold env_singleton.
+      follows rewrite eqb_refl.
+    + follows apply Hweaken.
+  - follows eapply changeAcc_unchanged_read.
+Qed.
+
+Theorem changeAcc_strengthened_read {Γ Γ' x y c f V} {v: V}:
+  changeAcc Γ x f Γ' ->
+  (forall acc, f acc ⊑ acc) ->
+  read Γ' c y v ->
+  read Γ c y v.
+Proof using. 
+  intros * Hchange Hweaken Hread.
+  destruct classic (x = y) as case.
+  - subst.
+    destruct Hchange as (acc & W & w & Hlookup & ->).
+    destruct Hread as (acc' & Hlookup' & Hacc').
+    unfold env_concat in Hlookup'.
+    rewrite map_acc_env_singleton in Hlookup'.
+    unfold env_singleton in Hlookup'.
+    rewrite eqb_refl in Hlookup'.
+    inject Hlookup'.
+    exists (acc).
+    split.
+    + assumption.
+    + follows apply Hweaken.
+  - follows eapply changeAcc_unchanged_read'.
 Qed.
 
 Theorem no_lookup_no_read {Γ c x V} {v: V}:
@@ -192,7 +280,7 @@ Theorem wrong_lookup_no_read {Γ acc c x V} {w v: V}:
 Proof using.
   intros * Heq Hneq (? & Heq' & ?).
   rewritec Heq' in Heq.
-  follows inject Heq.
+  follows inv! Heq.
 Qed.
 
 Theorem good_lookup_read {Γ acc c x V} {w v: V}:
@@ -202,7 +290,17 @@ Theorem good_lookup_read {Γ acc c x V} {w v: V}:
 Proof using.
   intros * Heq (? & Heq' & ?).
   rewritec Heq' in Heq.
-  follows inject Heq.
+  follows inv! Heq.
+Qed.
+
+Theorem good_lookup_read_JMeq {Γ acc c x W V} {w: W} {v: V}:
+  Γ x = Some (acc, box w) ->
+  read Γ c x v ->
+  w ~= v.
+Proof using.
+  intros * Heq (? & Heq' & ?).
+  rewritec Heq' in Heq.
+  follows inv! Heq.
 Qed.
 
 Theorem good_lookup_read_replace {Γ acc c x V} {w v: V}:
@@ -213,7 +311,17 @@ Proof using.
   intros * Heq Hread.
   inv Hread as (? & Heq' & ?).
   rewritec Heq' in Heq.
-  follows inject Heq.
+  follows inv! Heq.
+Qed.
+
+Theorem good_lookup_read_acc {Γ acc c x W V} {w: W} {v: V}:
+  Γ x = Some (acc, box w) ->
+  read Γ c x v ->
+  acc c p_read.
+Proof using.
+  intros * Heq (? & Heq' & ?).
+  rewritec Heq' in Heq.
+  follows inv! Heq.
 Qed.
   
 Corollary wrong_lookup_no_read_single_hyp {Γ c x V} {v: V}:
@@ -316,17 +424,24 @@ Ltac simpl_read H :=
         pose proof (eq_refl : Γ x = lookup) as Heq;
         match lookup with 
         | Some (_, box _) =>
-            (* This branch should also add to the environment that the reading 
-               component obeys the access rule we found *)
             let veq := fresh in 
-            let veq_term := constr:(good_lookup_read Heq H) in
-            lazymatch type of veq_term with 
-            | ?x = ?x => fail
-            | _ => idtac
-            end;
-            pose new proof veq_term as veq;
-            try discriminate veq;
-            subst          
+            ((let veq_term := constr:(good_lookup_read Heq H) in
+              lazymatch type of veq_term with 
+              | ?x = ?x => fail
+              | _ => idtac
+              end;
+              pose new proof veq_term as veq;
+              try discriminate veq) +
+            (let veq_term := constr:(good_lookup_read_JMeq Heq H) in
+              lazymatch type of veq_term with 
+              | ?x ~= ?x => fail
+              | _ => idtac
+              end;
+              pose new proof veq_term as veq));
+            let aeq := fresh in 
+            pose new proof (good_lookup_read_acc Heq H) as aeq;
+            try discriminate aeq;
+            subst
         | None => exact (False_rect _ (no_lookup_no_read Heq H))
         end;
         try clear Heq
@@ -351,7 +466,17 @@ Theorem good_lookup_write {Γ acc c x l V} {v: V} {Γ'}:
 Proof using.
   intros * Heq (acc' & curr & lookup & ? & ->).
   rewritec Heq in lookup.
-  follows inject lookup.
+  follows inv lookup.
+Qed.
+
+Theorem good_lookup_write_acc {Γ acc c x W V} {w: W} {v: V} {Γ'}:
+  Γ x = Some (acc, box w) ->
+  write Γ c x v Γ' ->
+  acc c p_write.
+Proof using.
+  intros * Heq (acc' & curr & lookup & ? & ->).
+  rewritec Heq in lookup.
+  follows inv lookup.
 Qed.
 
 Ltac simpl_write H :=
@@ -370,6 +495,9 @@ Ltac simpl_write H :=
             end;
             pose new proof Γeq_term as Γeq;
             try discriminate Γeq;
+            let Hacc := fresh in
+            pose new proof (good_lookup_write_acc Heq H) as Hacc;
+            try discriminate Hacc;
             subst
         | None => exact (False_rect _ (no_lookup_no_write Heq H))
         end;
@@ -416,10 +544,56 @@ Ltac write_unchanged_facts :=
       end
   end.
 
+Ltac changeAcc_unchanged_facts :=
+  repeat match goal with 
+  | Hchange : changeAcc ?Γ ?x _ ?Γ' |- _ =>
+      repeat match goal with 
+      | Hread : read Γ _ ?y _ |- _ =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged_read Heq Hchange Hread);
+          try clear Heq
+      | Hread  : read Γ' _ ?y _ |- _ =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged_read' Heq Hchange Hread);
+          try clear Heq
+      | lookup : context[Γ ?y] |- _ =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged Hchange Heq);
+          try clear Heq
+      | lookup : context[Γ' ?y] |- _ =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged Hchange Heq);
+          try clear Heq
+      | |- context[Γ ?y] =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged Hchange Heq);
+          try clear Heq
+      | |- context[Γ' ?y] =>
+          let Heq := fresh "Heq" in
+          assert (Heq: x <> y) by discriminate;
+          pose new proof (changeAcc_unchanged Hchange Heq);
+          try clear Heq
+      end
+  end.
+
 Ltac simpl_rws := repeat find (fun H => simpl_read H || simpl_write H).
 
 Tactic Notation "simpl_rws!" := 
-  repeat (simpl_rws || write_unchanged_facts).
+  repeat (simpl_rws || write_unchanged_facts || changeAcc_unchanged_facts).
+
+Require Import Ctl.
+Ltac rw_solver := 
+  intros;
+  tentails! in *;
+  intros;
+  simpl_rws!;
+  repeat find (fun H => apply refl_string_eq in H);
+  tedious 3.
 
 Close Scope env_scope.
 Close Scope string_scope.
