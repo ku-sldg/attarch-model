@@ -618,6 +618,7 @@ Require Import Ctl.
 Tactic Notation "rw_solver" "with" tactic3(tac) :=
   unfold not in *;
   intros;
+  tintros;
   tentails! in *;
   intros;
   simpl_rws!;
@@ -627,6 +628,53 @@ Tactic Notation "rw_solver" "with" tactic3(tac) :=
 
 Tactic Notation "rw_solver" :=
   rw_solver with idtac.
+
+
+Ltac lookup_rewrite :=
+  progress match goal with 
+  | H: ?Γ ?x = _ |- _ =>
+      match type of Γ with 
+      | env => rewrite -> H in *
+      end
+  | H: _ = ?Γ ?x |- _ =>
+      match type of Γ with 
+      | env => rewrite <- H in *
+      end
+ end.
+
+(* Tactic Notation "rw_solver_exp" "with" tactic3(tac) :=
+  unfold not in *;
+  intros;
+  tintros;
+  tentails! in *;
+  intros;
+  unfold read, write, changeAcc in *;
+  decompose_products;
+  repeat lookup_rewrite;
+  repeat find inject;
+  repeat find (fun H => apply refl_string_eq in H);
+  tac.
+  (* tedious 3. *)
+
+Tactic Notation "rw_solver_exp" :=
+  rw_solver_exp with idtac. *)
+
+Tactic Notation "rw_solver!" "with" tactic3(tac) :=
+  unfold not in *;
+  intros;
+  tintros;
+  tentails! in *;
+  intros;
+  simpl_rws!;
+  repeat find (fun H => apply refl_string_eq in H);
+  tac;
+  unfold read, write, changeAcc in *;
+  decompose_products;
+  tedious 3.
+
+Tactic Notation "rw_solver!" :=
+  rw_solver! with idtac.
+
 
 Close Scope env_scope.
 Close Scope string_scope.

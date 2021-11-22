@@ -119,7 +119,7 @@ Inductive useram_trans : relation (useram_label × env) :=
         (useram_shallow_attest, Γ)
   | useram_do_shallow_attest : forall Γ Γ' os target meas,
       read  Γ "useram" "good_os" os ->
-      read  Γ "useram" "good_os" target ->
+      read  Γ "useram" "good_target" target ->
       shallow_attest os target meas ->
       write Γ "useram" "shallow_attest_result" meas Γ' ->
       useram_trans
@@ -141,8 +141,11 @@ Inductive malicious_proc_trans : relation env :=
   | corrupt_os : forall Γ Γ',
       write Γ "malicious_proc" "good_os" false Γ' ->
       malicious_proc_trans Γ Γ'
+  | corrupt_target : forall Γ Γ',
+      write Γ "malicious_proc" "good_target" false Γ' ->
+      malicious_proc_trans Γ Γ'
   | leak_key : forall Γ Γ',
-      (* good_os false *)
+      read Γ "malicious_proc" "good_os" false ->
       changeAcc Γ "useram_key" (λ acc, canRead "malicious_proc" ⊔ acc) Γ' ->
       malicious_proc_trans Γ Γ'.
 
@@ -219,6 +222,21 @@ Defined.
 
 Instance transition__attarch_trans : transition attarch_trans :=
   { trans_serial := attarch_trans_serial }.
+
+
+Ltac _attarch_step_inv H :=
+  lazymatch type of H with 
+  | attarch_trans _ _ => idtac
+  | platam_trans _ _ => idtac
+  | vm_trans _ _ => idtac
+  | malicious_proc_trans _ _ => idtac
+  | useram_trans _ _ => idtac
+  end;
+  invc H;
+  try find _attarch_step_inv.
+Ltac attarch_step_inv := 
+  find _attarch_step_inv.
+
 
 Close Scope env_scope.
 Close Scope string_scope.
