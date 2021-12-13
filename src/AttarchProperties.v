@@ -11,20 +11,115 @@ Open Scope env_scope.
 
 
 Definition diverged : tprop attarch_state :=
-  <[λ '(l, _), l = attarch_bot]>.
+  ⟨λ '(l, _), l = attarch_bot⟩.
 
 
-Definition platam_key_secure : tprop attarch_state := <[λ '(_, Γ),
+Definition image_is_good : tprop attarch_state := ⟨λ '(_, Γ),
+  exists acc, Γ "good_image" = Some (acc, box true)
+⟩.
+
+Definition platam_key_is_good : tprop attarch_state := ⟨λ '(_, Γ),
+  read Γ "platam" "platam_key" good_platam_key
+⟩.
+
+Theorem platam_good_key_good_image : forall s0,
+  attarch_trans @s0 ⊨
+    is_init_state -->
+    image_is_good -->
+    AF (platam_key_is_good || diverged).
+Proof using.
+  intros [l Γ].
+  tintros is_init image_good.
+  tentails! in *.
+  destruct exists image_good acc_image.
+
+  tsimpl.
+  intros *.
+  destruct or is_init; repeat find inject; [|discriminate].
+  
+  pose proof (ex_destruct_path _ _ p) as [r peq].
+  inv r.
+Abort.
+
+
+Lemma good_boot_token_good_image : forall s0,
+  attarch_trans @s0 ⊨ 
+    is_init_state -->
+    AG (
+      ⟨λ '(_, Γ), exists acc, Γ "boot_token" = Some (acc, box good_boot_token)⟩ --> 
+      image_is_good
+    ).
+Proof using.
+  intros *.
+  tintro Hs0.
+  apply star__AG.
+  intros * Hstar.
+  induct! Hstar; star_notation; [|attarch_step_inv];
+    try (tintro; tforward IHHstar; rw_solver!).
+  { tintro boot_token_lookup.
+    tentails! in *.
+    follows destruct Hs0 as [->| ->]; simpl in *. }
+  { rw_solver!. }
+  Unshelve.
+  tedious.
+Qed.
+
+Lemma good_decrypt_platam_key_inv : forall key token,
+  decrypt_platam_key key token = good_platam_key ->
+  key = encr_platam_key /\ token = good_boot_token.
+Proof using.
+  intros * ?.
+  follows destruct key, token.
+Qed.
+
+Theorem platam_good_key_good_image : forall s0,
+  let key_good : tprop attarch_state := ⟨λ '(_, Γ),
+    exists acc, Γ "platam_key" = Some (acc, box good_platam_key)
+  ⟩ in
+  attarch_trans @s0 ⊨
+    is_init_state -->
+    AG (key_good --> image_is_good).
+Proof using.
+  intros *.
+  tintro Hs0.
+  apply star__AG.
+  intros * Hstar.
+  induct! Hstar; star_notation; [|attarch_step_inv];
+    try (tintro; tforward IHHstar; rw_solver!).
+  - tintro H.
+    exfalso.
+    destruct s0.
+    destruct or Hs0; inject Hs0; rw_solver.
+  - tintro H.
+    tentails!.
+    tentails! in H.
+    destruct exists H acc.
+    destruct H5 as (? & ? & ? & ? & ->).
+    inject H.
+    apply good_decrypt_platam_key_inv in H as [-> ->].
+    unfold decrypt_platam_key.
+    clear IHHstar.
+    assert (attarch_trans @(sel4_run platam_init x, Γ) ⊨ image_is_good).
+    + apply star_in_path in Hstar as [p Hin].
+      after etapply good_boot_token_good_image.
+      rw_solver!.
+    + rw_solver!.
+Qed.
+
+
+Definition platam_key_secure : tprop attarch_state := ⟨λ '(_, Γ),
   forall c key_t (key: key_t),
     read Γ c "platam_key" key -> 
     c = "platam"
-]>.
+⟩.
 
 Theorem platam_key_uncompromised: forall s0,
-  is_init_attarch_state s0 ->
-  attarch_trans @s0 ⊨ AG platam_key_secure.
+  attarch_trans @s0 ⊨ 
+    is_init_state -->
+    AG platam_key_secure.
 Proof.
-  intros s0 s0_init.
+  intros s0.
+  tintro s0_init.
   apply star__AG.
   intros s Hstar.
   induct! Hstar; star_notation; [|attarch_step_inv]; try rw_solver.
@@ -40,28 +135,30 @@ Proof.
 Qed.
 
 
-Definition useram_key_secure : tprop attarch_state := <[λ '(_, Γ),
+Definition useram_key_secure : tprop attarch_state := ⟨λ '(_, Γ),
   forall c,
     read Γ c "useram_key" good_useram_key -> 
     c = "useram"
-]>.
+⟩.
 
-Definition useram_key_released : tprop attarch_state := <[λ '(l, _),
+Definition useram_key_released : tprop attarch_state := ⟨λ '(l, _),
   exists pl ul,
     l = sel4_run pl (vm_run ul) /\ 
     ul <> useram_wait_key
-]>.
+⟩.
 
 Theorem useram_key_uncompromised_setup : forall s0,
-  is_init_attarch_state s0 ->
-  attarch_trans @s0 ⊨ A[useram_key_secure W useram_key_released].
+  attarch_trans @s0 ⊨
+    is_init_state -->
+    A[useram_key_secure W useram_key_released].
 Proof.
-  intros s0 s0_init.
+  intros s0.
+  tintros s0_init.
   apply AW_weaken_left
-    with (P := <[λ '(_, Γ), forall acc v,
+    with (P := ⟨λ '(_, Γ), forall acc v,
       Γ "useram_key" = Some (acc, box v) ->
       v <> good_useram_key
-    ]>).
+    ⟩).
   { intros [l Γ].
     tintro H.
     tentails! in *.
@@ -80,9 +177,9 @@ Proof.
 Qed.
 
 
-Definition os_corrupted : tprop attarch_state := <[λ '(_, Γ),
+Definition os_corrupted : tprop attarch_state := ⟨λ '(_, Γ),
   exists acc, Γ "good_os" = Some (acc, box false)
-]>.
+⟩.
 
 Theorem os_corrupted_permanent' : forall pl vl Γ,
   attarch_trans @(sel4_run pl vl, Γ) ⊨ os_corrupted --> AG os_corrupted.
@@ -101,10 +198,12 @@ Proof using.
 Qed.
 
 Theorem os_corrupted_permanent : forall s0,
-  is_init_attarch_state s0 ->
-  attarch_trans @s0 ⊨ AG (os_corrupted --> AG os_corrupted).
+  attarch_trans @s0 ⊨ 
+    is_init_state -->
+    AG (os_corrupted --> AG os_corrupted).
 Proof using.
-  intros s0 Hs0.
+  intros s0.
+  tintros Hs0.
   apply star__AG.
   intros * Hstar.
   induct! Hstar; star_notation.
@@ -123,23 +222,23 @@ Proof using.
 Qed.
 
 
-Definition deep_attesting : tprop attarch_state := <[λ '(l, _),
+Definition deep_attesting : tprop attarch_state := ⟨λ '(l, _),
   l = sel4_run platam_deep_attest (vm_run useram_deep_attest)
-]>.
+⟩.
 
-Definition starting_shallow_attest : tprop attarch_state := <[λ '(l, _),
+Definition starting_shallow_attest : tprop attarch_state := ⟨λ '(l, _),
   exists pl, l = sel4_run pl (vm_run useram_shallow_attest)
-]>.
+⟩.
 
-Definition finished_shallow_attest : tprop attarch_state := <[λ '(l, _),
+Definition finished_shallow_attest : tprop attarch_state := ⟨λ '(l, _),
   exists pl, l = sel4_run pl (vm_run useram_listen)
-]>.
+⟩.
 
-Definition trustworthy_attest_result : tprop attarch_state := <[λ '(_, Γ),
+Definition trustworthy_attest_result : tprop attarch_state := ⟨λ '(_, Γ),
   forall acc acc' (b: bool),
     Γ "shallow_attest_result" = Some (acc, box b) ->
     Γ "good_target" = Some (acc', box b)
-]>.
+⟩.
 
 Theorem deep_attest_corruption_window_aux : forall Γ,
   attarch_trans @(sel4_run platam_deep_attest (vm_run useram_listen), Γ) ⊨
@@ -159,7 +258,7 @@ Proof using.
         destruct H as [? H].
         inject H.
  
-
+(* 
   intros *.
   apply AW_intro; split.
   - left. rw_solver.
@@ -167,7 +266,8 @@ Proof using.
   - intros * H * Hstep.
     invc Hstep; try (left; rw_solver).
     + invc H0.
-      * 
+      *  *)
+Abort.
 
 
 Theorem deep_attest_corruption_window :
@@ -178,6 +278,7 @@ Theorem deep_attest_corruption_window :
       W os_corrupted]).
 Proof using.
   intros.
+Abort.
 
 (* ⊨ os_corrupted --> AG os_corrupted *)
 

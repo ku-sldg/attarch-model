@@ -1,8 +1,7 @@
 Require Import Privilege.
 Require Import Env.
 
-Require Import Ctl.BinaryRelations.
-Require Import Ctl.Definition.
+Require Import Ctl.Ctl.
 Require Import Glib.Glib.
 
 Open Scope string_scope.
@@ -203,16 +202,21 @@ Inductive attarch_trans : relation attarch_state :=
  | attarch_diverge : forall l Γ,
       attarch_trans (l, Γ) (attarch_bot, Γ).
 
+
 Definition attarch_good_init_state : attarch_state := 
   (boot, readable ? "good_image" ↦ true).
 
 Definition attarch_bad_init_state : attarch_state := 
   (boot, readable ? "good_image" ↦ false).
 
-Definition is_init_attarch_state (s: attarch_state) : Prop := 
+(* Definition is_init_attarch_state (s: attarch_state) : Prop := 
   s = attarch_good_init_state \/ 
-  s = attarch_bad_init_state.
+  s = attarch_bad_init_state. *)
 
+Definition is_init_state : tprop attarch_state := <[λ s,
+  s = attarch_good_init_state \/ 
+  s = attarch_bad_init_state
+]>.
 
 Lemma attarch_trans_serial : 
   serial_witness attarch_trans.
