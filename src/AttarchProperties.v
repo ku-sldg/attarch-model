@@ -18,7 +18,7 @@ Definition image_is_good : tprop attarch_state := ⟨λ '(_, Γ),
   exists acc, Γ "good_image" = Some (acc, box true)
 ⟩.
 
-Definition platam_key_is_good : tprop attarch_state := ⟨λ '(_, Γ),
+(* Definition platam_key_is_good : tprop attarch_state := ⟨λ '(_, Γ),
   read Γ "platam" "platam_key" good_platam_key
 ⟩.
 
@@ -39,7 +39,7 @@ Proof using.
   
   pose proof (ex_destruct_path _ _ p) as [r peq].
   inv r.
-Abort.
+Abort. *)
 
 
 Lemma good_boot_token_good_image : forall s0,
@@ -72,13 +72,14 @@ Proof using.
   follows destruct key, token.
 Qed.
 
+Definition platam_key_good : tprop attarch_state := ⟨λ '(_, Γ),
+  exists acc, Γ "platam_key" = Some (acc, box good_platam_key)
+⟩.
+
 Theorem platam_good_key_good_image : forall s0,
-  let key_good : tprop attarch_state := ⟨λ '(_, Γ),
-    exists acc, Γ "platam_key" = Some (acc, box good_platam_key)
-  ⟩ in
   attarch_trans @s0 ⊨
     is_init_state -->
-    AG (key_good --> image_is_good).
+    AG (platam_key_good --> image_is_good).
 Proof using.
   intros *.
   tintro Hs0.
