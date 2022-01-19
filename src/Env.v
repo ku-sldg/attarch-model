@@ -117,7 +117,7 @@ Qed.
 
 Lemma good_lookup_env_singleton_inv : forall x x' acc acc' V (v: V) V' (v': V'),
   env_singleton x acc v x' = Some (acc', box v') ->
-  x = x' /\ acc = acc' /\ V = V' /\ v ~= v'.
+  x = x' /\ acc = acc' /\ V = V' /\ v ~=~ v'.
 Proof using.
   intros * H.
   unfold env_singleton in H.
@@ -128,7 +128,7 @@ Qed.
 
 Corollary good_lookup_env_singleton_inv' : forall x x' acc acc' V (v: V) V' (v': V'),
   (acc ? x ↦ v) x' = Some (acc', box v') ->
-  x = x' /\ acc = acc' /\ V = V' /\ v ~= v'.
+  x = x' /\ acc = acc' /\ V = V' /\ v ~=~ v'.
 Proof using.
   intros *.
   rewrite map_acc_env_singleton.
@@ -367,7 +367,7 @@ Qed.
 Theorem good_lookup_read_JMeq {Γ acc c x W V} {w: W} {v: V}:
   Γ x = Some (acc, box w) ->
   read Γ c x v ->
-  w ~= v.
+  w ~=~ v.
 Proof using.
   intros * Heq (? & Heq' & ?).
   rewritec Heq' in Heq.
@@ -505,7 +505,7 @@ Ltac simpl_read H :=
               try discriminate veq) +
             (let veq_term := constr:(good_lookup_read_JMeq Heq H) in
               lazymatch type of veq_term with 
-              | ?x ~= ?x => fail
+              | ?x ~=~ ?x => fail
               | _ => idtac
               end;
               pose new proof veq_term as veq));
