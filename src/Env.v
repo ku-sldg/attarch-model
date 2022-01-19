@@ -52,6 +52,10 @@ Definition env_concat (Γ1 Γ2: env) : env := λ lookup,
 Notation "Γ1 ;; Γ2" := (env_concat Γ1 Γ2)
   (at level 65, right associativity) : env_scope.
 
+Definition lookup {V} (Γ: env) (name: var) (v: V) : Prop :=
+  exists acc: access, 
+    Γ name = Some (acc, box v).
+
 Definition read {V} (Γ: env) (c: comp) (name: var) (v: V) : Prop :=
   exists acc: access, 
     Γ name = Some (acc, box v) /\
@@ -207,6 +211,44 @@ Proof using.
   - assumption.
 Qed.
 
+Theorem write_unchanged_lookup {Γ Γ' x y c V V'} {v: V} {v': V'}:
+  x <> y ->
+  write Γ c x v Γ' ->
+  lookup Γ y v' ->
+  lookup Γ' y v'.
+Proof using.
+  intros Hneq Hwrite Hlookup.
+  destruct Hlookup as [acc Hlookup].
+  exists acc.
+  rewrite <- Hlookup.
+  symmetry.
+  follows eapply write_unchanged.
+Qed. 
+
+Theorem write_unchanged_lookup' {Γ Γ' x y c V V'} {v: V} {v': V'}:
+  x <> y ->
+  write Γ c x v Γ' ->
+  lookup Γ' y v' ->
+  lookup Γ y v'.
+Proof using.
+  intros Hneq Hwrite Hlookup.
+  destruct Hlookup as [acc Hlookup].
+  exists acc.
+  rewrite <- Hlookup.
+  follows eapply write_unchanged.
+Qed.
+
+Theorem write_unchanged_lookup_rew {Γ Γ' x y c V V'} {v: V} {v': V'}:
+  x <> y ->
+  write Γ c x v Γ' ->
+  lookup Γ y v' = lookup Γ' y v'.
+Proof using.
+  intros.
+  extensionality Hlookup.
+  - follows eapply write_unchanged_lookup.
+  - follows eapply write_unchanged_lookup'.
+Qed.
+
 Theorem changeAcc_unchanged {Γ Γ' x y f}:
   x <> y ->
   changeAcc Γ x f Γ' ->
@@ -291,6 +333,7 @@ Proof using.
     + follows apply Hweaken.
   - follows eapply changeAcc_unchanged_read'.
 Qed.
+
 
 Theorem no_lookup_no_read {Γ c x V} {v: V}:
   Γ x = None -> ~ read Γ c x v.
@@ -668,7 +711,7 @@ Tactic Notation "rw_solver!" "with" tactic3(tac) :=
   simpl_rws!;
   repeat find (fun H => apply refl_string_eq in H);
   tac;
-  unfold read, write, changeAcc in *;
+  unfold lookup, read, write, changeAcc in *;
   decompose_products;
   tedious 3.
 

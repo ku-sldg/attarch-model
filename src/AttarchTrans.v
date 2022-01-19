@@ -213,10 +213,10 @@ Definition attarch_bad_init_state : attarch_state :=
   s = attarch_good_init_state \/ 
   s = attarch_bad_init_state. *)
 
-Definition is_init_state : tprop attarch_state := <[λ s,
+Definition is_init_state : tprop attarch_state := ⟦λ s,
   s = attarch_good_init_state \/ 
   s = attarch_bad_init_state
-]>.
+⟧.
 
 Lemma attarch_trans_serial : 
   serial_witness attarch_trans.

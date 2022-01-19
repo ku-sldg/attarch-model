@@ -28,6 +28,8 @@ Definition acc_inter (a1 a2: access) : access := λ c p,
 Notation "a1 ⊓ a2" := (acc_inter a1 a2)
   (at level 40, left associativity).
 
+Definition acc_complement (a: access) : access := λ c p, negb (a c p).
+
 Definition acc_le (a1 a2: access) : Prop := forall c p,
   (* Bool.le (a1 c p) (a2 c p). *)
   (a1 c p) -> (a2 c p).
@@ -87,6 +89,15 @@ Proof using.
   apply acc_top_union_l.
 Qed.
 
+Lemma acc_complement_union : forall a,
+  a ⊔ (acc_complement a) = acc_top.
+Proof using.
+  intros *.
+  extensionality c p.
+  unfold acc_union, acc_complement.
+  follows destruct (a c p).
+Qed.
+
 Lemma acc_inter_assoc : forall a1 a2 a3,
   a1 ⊓ (a2 ⊓ a3) = a1 ⊓ a2 ⊓ a3.
 Proof using.
@@ -135,6 +146,15 @@ Proof using.
   apply acc_top_inter_l.
 Qed.
 
+Lemma acc_complement_inter : forall a,
+  a ⊓ (acc_complement a) = acc_bot.
+Proof using.
+  intros *.
+  extensionality c p.
+  unfold acc_inter, acc_complement.
+  follows destruct (a c p).
+Qed.
+
 Lemma acc_bot_le : forall a,
   acc_bot ⊑ a.
 Proof using.
@@ -179,6 +199,22 @@ Proof using.
   unfold acc_le, acc_inter.
   intros *.
   follows destruct (a1 c p), (a2 c p).
+Qed.
+
+Lemma acc_inter_union_distr : forall a1 a2 a3,
+  a1 ⊓ (a2 ⊔ a3) = (a1 ⊓ a2) ⊔ (a1 ⊓ a3).
+Proof using.
+  intros *.
+  extensionality c p.
+  apply Bool.andb_orb_distrib_r.
+Qed.
+
+Lemma acc_union_inter_distr : forall a1 a2 a3,
+  a1 ⊔ (a2 ⊓ a3) = (a1 ⊔ a2) ⊓ (a1 ⊔ a3).
+Proof using.
+  intros *.
+  extensionality c p.
+  apply Bool.orb_andb_distrib_r.
 Qed.
 
 
